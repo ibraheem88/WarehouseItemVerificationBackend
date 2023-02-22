@@ -40,7 +40,7 @@ router.post('/',async(req,res)=>{
 
 router.patch('/verify/:id',async(req,res)=>{
     const {id}=req.params
-    const {userId,lastLogin,scanDate}=req.body.trail
+    const {userId,lastLogin,scanDate}=(req.body.trail) || {}
     if(!userId || !lastLogin || !scanDate){
         res.status(400).json("Audit trail of order required containing userId,lastLogin and scanDate")
     }else{
@@ -71,7 +71,27 @@ router.patch('/verify/:id',async(req,res)=>{
 })
 
 
-
+router.patch('/:id/item/:itemId',async(req,res)=>{
+    const {id,itemId}=req.params
+    const {userId}=req.body
+    console.log(userId)
+    const user=await User.findOne({userId})
+    if(user){
+    const order=await Order.updateOne({entity_id:id,"item.item_id": itemId},{
+        $set:{
+            'item.$.is_verified':true,
+            'item.$.verified_by': userId
+        }
+    })
+    if(order.matchedCount>0){
+        res.status(200).json("Item "+itemId+" verified")
+    }else{
+        res.status(400).json("Cannot Verify. Invalid Order Id Or Item Id") 
+    }}
+    else{
+        res.status(400).json("Cannot Verify. Invalid User Id")
+    }
+})
 
 
 export default router

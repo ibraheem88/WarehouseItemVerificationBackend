@@ -40,6 +40,36 @@ router.delete("/:id",async(req,res)=>{
     }
 })
 
+router.get('/:id/orders',async(req,res)=>{
+    const {id}=req.params
+    const user=await User.findOne({userId:id})
+    if(user){
+        const orders=await Order.find({entity_id: {$in: user.assignedOrders}})
+        res.status(200).json(orders)
+    }else{
+        res.status(404).json("User not found") 
+    }
+})
+
+router.get('/:id/orders/:orderId',async(req,res)=>{
+    const {id,orderId}=req.params
+    const user=await User.findOne({userId:id})
+    if(user){
+        const order=await Order.findOne({$and: [
+            {entity_id: {$in: user.assignedOrders}},
+            {entity_id: {$in: orderId}}
+        ]
+        })
+        if(order){
+            res.status(200).json(order)
+        }else{
+            res.status(200).json(false)
+        }
+    }else{
+        res.status(404).json("User not found") 
+    }
+})
+
 router.patch('/orders',async(req,res)=>{
     let {userId,orders}=req.body
     let user,invalidIds=false

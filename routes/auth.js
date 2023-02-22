@@ -24,7 +24,7 @@ const passwordMatch=await comparePassword(password,userExists?.password)
 
 if(userExists && passwordMatch){
     let token=jsonwebtoken.sign({userId},JWT_SECRET)
-    res.status(200).json(token)
+    res.status(200).json({token,userId: userExists.userId})
 }
 else{
     res.status(404).json("Invalid Username or Password")

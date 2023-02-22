@@ -11,12 +11,20 @@ const trailSchema=new Schema({
     }
 )
 
+const itemSchema=new Schema({
+    item_id: {type:String,required: true},
+    order_id: {type:String,required: true},
+    is_verified: Boolean
+},{strict: false}
+)
+
 const orderSchema=new Schema({
     entity_id: {type: String,required: true},
     status: String,
     store_id: String,
     is_verified: {type: Boolean,required: true},
     trail: trailSchema,
+    item: [itemSchema],
     customer_id: String,
     reference_1: String,
     reference_2: String,
