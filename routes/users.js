@@ -20,7 +20,7 @@ router.get("/",adminToken,async(req,res)=>{
     status: 200})
 })
 
-router.get("/:id",requireToken,async(req,res)=>{
+router.get("/detail/:id",requireToken,async(req,res)=>{
     const {id}=req.params
     let user
     user=await User.findOne({userId:id})
@@ -48,14 +48,13 @@ router.delete("/:id",adminToken,async(req,res)=>{
 })
 
 router.get('/orders',requireToken,async(req,res)=>{
-    const {id}=req.params
-    console.log(id)
+    const {id}=req
     const user=await User.findOne({userId:id})
     if(user){
         const orders=await Order.find({entity_id: {$in: user.assignedOrders}})
-        res.status(200).json(orders)
+        res.json({data:orders,message:"Orders Assigned Loaded",status:200})
     }else{
-        res.status(404).json("User not found") 
+        res.json({data: {},message:"User not found",status:404}) 
     }
 })
 

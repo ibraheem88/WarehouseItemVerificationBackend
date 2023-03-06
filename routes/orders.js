@@ -1,15 +1,17 @@
 import express from 'express'
 import User from '../models/user.model.js'
 import Order from '../models/order.model.js'
+import requireAdminToken from '../middleware/requireAdminToken.js'
+import requireToken from '../middleware/requireToken.js'
 
 const router=express.Router()
 
-router.get('/',async(req,res)=>{
+router.get('/',requireAdminToken,async(req,res)=>{
     const orders=await Order.find()
-    res.status(200).send(orders)
+    res.json({data:orders,message:"Orders Loaded Successfully",status:200})
 })
 
-router.post('/',async(req,res)=>{
+router.post('/',requireAdminToken,async(req,res)=>{
     const {orders}=req.body
     let duplicate=false
     const orderIds=orders.map((order=>order.entity_id))
@@ -20,33 +22,33 @@ router.post('/',async(req,res)=>{
         }
     })
     if(duplicate){
-        res.status(403).json("Cannot save duplicate orders. One or more orders are already present in db.")
+        res.json({data: {},message:"Cannot save duplicate orders. One or more orders provided are already present in db.",status:400})
     }
     else{
     if(orders.length>0){
     Order.insertMany([...orders], (err, docs) => {
         if(err){
             const key=Object.keys(err.errors)
-            res.status(400).json(err._message+". "+err.errors[key[0]])
+            res.json({data: {},message:err._message+". "+err.errors[key[0]],status:400})
         }else{
-            res.status(200).json("Orders Added Successfully")
+            res.json({data: {},message:"Orders Added Successfully",status:200})
         }
       })
     }else{
-        res.status(403).json("No Orders to Add")
+        res.json({data:{},message:"No Orders to Add",status:400})
     }
     }
 })
 
-router.patch('/verify/:id',async(req,res)=>{
+router.patch('/verify/:id',requireToken,async(req,res)=>{
     const {id}=req.params
     const {userId,lastLogin,scanDate}=(req.body.trail) || {}
     if(!userId || !lastLogin || !scanDate){
-        res.status(400).json("Audit trail of order required containing userId,lastLogin and scanDate")
+        res.json({data:{},message:"Audit trail of order required containing userId,lastLogin and scanDate",status:400})
     }else{
         const user=await User.find({userId})
         if(!user.length>0){
-            res.status(400).json("Invalid userId sent") 
+            res.json({data:{},message:"Invalid userId sent in audit trail",status:400}) 
         }
         else{
     const order=await Order.findOne({entity_id:id})
@@ -57,26 +59,25 @@ router.patch('/verify/:id',async(req,res)=>{
         await order.updateOne({is_verified: true,trail})
         order.save((err,doc)=>{
             if(doc){
-            res.status(200).json("Order With Id "+id+" Verified")
+            res.json({data:{},message:"Order With Id "+id+" Verified",status:200})
             }
             if(err){
-                res.status(503).json("Unable To Verify Order, Server Error")
+                res.json({data:{},message:"Unable To Verify Order, Server Error",status:503})
             }
         })
     }else{
-        res.status(404).json("No Order Found Against Given Id")
+        res.json({data:{},message:"No Order Found Against Given Id",status:403})
     }
 }
 }
 })
 
 
-router.patch('/:id/item/:itemId',async(req,res)=>{
+router.patch('/:id/item/:itemId',requireToken,async(req,res)=>{
     const {id,itemId}=req.params
-    const {userId}=req.body
-    console.log(userId)
+    const userId=req.id
     const user=await User.findOne({userId})
-    if(user){
+    if(user && user.assignedOrders.includes(id)){
     const order=await Order.updateOne({entity_id:id,"item.item_id": itemId},{
         $set:{
             'item.$.is_verified':true,
@@ -84,12 +85,12 @@ router.patch('/:id/item/:itemId',async(req,res)=>{
         }
     })
     if(order.matchedCount>0){
-        res.status(200).json("Item "+itemId+" verified")
+        res.json({data:{},message:"Item "+itemId+" verified",status:200})
     }else{
-        res.status(400).json("Cannot Verify. Invalid Order Id Or Item Id") 
+        res.json({data:{},message:"Cannot Verify. Invalid Order Id Or Item Id",status:400}) 
     }}
     else{
-        res.status(400).json("Cannot Verify. Invalid User Id")
+        res.json({data:{},message:"Cannot Verify. Order not assigned to this user",status:400})
     }
 })
 
