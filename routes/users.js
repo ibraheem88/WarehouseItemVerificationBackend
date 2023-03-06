@@ -2,6 +2,8 @@ import express from "express"
 import bcrypt from 'bcrypt'
 import User from '../models/user.model.js'
 import Order from "../models/order.model.js"
+import requireToken from "../middleware/requireToken.js";
+import adminToken from '../middleware/requireAdminToken.js'
 const router=express.Router()
 
 const SALT_ROUNDS=10
@@ -12,36 +14,42 @@ const encryptPassword=async(password)=>{
     }).then((hash)=>hash)
 }
 
-router.get("/",async(req,res)=>{
+router.get("/",adminToken,async(req,res)=>{
     const users=await User.find()
-    res.status(200).json(users)
+    res.json({data: users,message: "Users Loaded Successfully",
+    status: 200})
 })
 
-router.get("/:id",async(req,res)=>{
+router.get("/:id",requireToken,async(req,res)=>{
     const {id}=req.params
     let user
     user=await User.findOne({userId:id})
     if(user){
-        res.status(200).json(user)
+        res.json({data: user,message: "User Detail Loaded Successfully",
+        status: 200})
     }else{
-        res.status(404).json("User not found")
+        res.json({data: {},message: "User Not Found",
+        status: 404})
     }
 })
 
-router.delete("/:id",async(req,res)=>{
+router.delete("/:id",adminToken,async(req,res)=>{
     const {id}=req.params
     let user
     user=await User.findOne({userId: id})
     if(user){
         await user.delete()
-        res.status(200).json("User Deleted")
+        res.json({data: {},message: "User Deleted",
+        status: 200})
     }else{
-        res.status(404).json("User not found")
+        res.json({data: {},message: "User Not Found",
+        status: 404})
     }
 })
 
-router.get('/:id/orders',async(req,res)=>{
+router.get('/orders',requireToken,async(req,res)=>{
     const {id}=req.params
+    console.log(id)
     const user=await User.findOne({userId:id})
     if(user){
         const orders=await Order.find({entity_id: {$in: user.assignedOrders}})
@@ -51,8 +59,9 @@ router.get('/:id/orders',async(req,res)=>{
     }
 })
 
-router.get('/:id/orders/:orderId',async(req,res)=>{
-    const {id,orderId}=req.params
+router.get('/orders/:orderId',requireToken,async(req,res)=>{
+    const {orderId}=req.params
+    const {id}=req
     const user=await User.findOne({userId:id})
     if(user){
         const order=await Order.findOne({$and: [
@@ -61,21 +70,21 @@ router.get('/:id/orders/:orderId',async(req,res)=>{
         ]
         })
         if(order){
-            res.status(200).json(order)
+            res.json({data: order,message: "Order is assigned",status:200})
         }else{
-            res.status(200).json(false)
+            res.json({data: false,message: "Order not assigned",status:200})
         }
     }else{
-        res.status(404).json("User not found") 
+        res.json({data: {},message:"User not found",status:404}) 
     }
 })
 
-router.patch('/orders',async(req,res)=>{
+router.patch('/orders',adminToken,async(req,res)=>{
     let {userId,orders}=req.body
     let user,invalidIds=false
     const assignedOrders=await User.find({ assignedOrders : { $elemMatch :{$in : orders} }}, { _id: 1})
     if(assignedOrders.length>0){
-        res.status(403).json("Cannot assign one order to multiple users. One or more orders already assigned")
+        res.json({data: {},message: "Cannot assign one order to multiple users. One or more orders already assigned",status:400})
     }
     else{
     const orderIdDb=await Order.distinct('entity_id')
@@ -85,21 +94,21 @@ router.patch('/orders',async(req,res)=>{
     }
     })
     if(invalidIds){
-         res.status(403).json("Invalid Order Ids Passed!")
+         res.json({data:{},message:"Invalid Order Ids Passed!",status:400})
     }else{
     user=await User.findOne({userId})
     if(user){
     await user.updateOne({ $push: { assignedOrders: [...orders] } })
-    res.status(200).json("Orders Assigned To Users")
+    res.json({data: {},message:"Orders Assigned To User",status:200})
     }
     else{
-        res.status(403).json("Invalid User Id")
+        res.json({data: {},message:"Invalid User Id",status:403})
     }
 }
     }
 })
 
-router.patch('/',async(req,res)=>{
+router.patch('/',adminToken,async(req,res)=>{
     const {userId,username,password,canVerify,assignedOrders,name}=req.body
     let user
     user=await User.findOne({userId})
@@ -116,37 +125,43 @@ router.patch('/',async(req,res)=>{
             res.json(err.message)
         }else{
             editedUser.save().then(()=>{
-                res.status(200).json("Record for User Updated Successfully")
+                res.json({data: {},message: "Record for user updated successfully",
+                status: 200})
             })
         }
     })
     }
     else{
-        res.status(404).json("Record for User Not Found")
+        res.json({data: {},message: "User record not found",
+        status: 404})
     }
 })
 
-router.post('/',async(req,res)=>{
+router.post('/',adminToken,async(req,res)=>{
 const {name,password,canVerify,userId}=req.body
 
 if(userId && password){
     const userExists=await User.findOne({userId})
     if(userExists){
-        res.status(403).json("User Id Already Exists!")
+        res.json({data: {},message: "UserId already exists",
+        status: 409})
     }else{
 let encryptedPassowrd=await encryptPassword(password)
 const user=new User({
     userId: userId,
     name: name ? name : '',
+    role:2,
     password: encryptedPassowrd,
     assignedOrders: [],
     canVerify: canVerify ? canVerify : true
 })
 user.save().then((user)=>{
-    res.json("User with id "+user.userId+" Added")}
+    res.json({data: {},message: `User with id#${user.userId} added`,
+    status: 200})}
     ).catch(err=>console.log(err))}}
 else{
-    res.status(403).json("User Id and Password Required To Register New User!")
+    res.json({data: {},message: `User id and password required for registration`,
+    status: 400})
 }
 })
 
