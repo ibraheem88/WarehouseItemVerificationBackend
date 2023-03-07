@@ -11,10 +11,25 @@ const app=express()
 const PORT=6000
 
 mongoose.set('strictQuery', true);
-mongoose.connect(process.env.MONGODB_URL,{useNewUrlParser: true})
+const call=async function(){
+try {
+    await mongoose.connect(process.env.MONGODB_URL,{
+        useNewUrlParser: true
+    })
+    console.log('mongoose connection: '+mongoose.connection.readyState);
+    
+} catch (error) {
+    console.log("error ====>", error )    
+}
+}
+await call()
+
 
 app.use(express.json())
 app.use(formidable())
+// app.use('/',(req,res)=>{
+//     res.json("Grape")
+// })
 app.use('/users',user_routes)
 app.use('/orders',order_routes)
 app.use('/auth',auth_routes)
