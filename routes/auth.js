@@ -16,7 +16,7 @@ const comparePassword=(password,hash='')=>{
    }
 
 router.post('/login',async(req,res)=>{
-const {userId,password}=req.body
+const {userId,password}=req.fields
 let userExists;
 userExists=await User.findOne({userId})
 

@@ -137,7 +137,7 @@ router.patch('/',adminToken,async(req,res)=>{
 })
 
 router.post('/',adminToken,async(req,res)=>{
-const {name,password,canVerify,userId}=req.body
+const {name,password,canVerify,userId}=req.fields
 
 if(userId && password){
     const userExists=await User.findOne({userId})

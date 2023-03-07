@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv"
 import mongoose from "mongoose";
+import formidable from 'express-formidable'
 dotenv.config()
 import user_routes from './routes/users.js'
 import auth_routes from './routes/auth.js'
@@ -13,6 +14,7 @@ mongoose.set('strictQuery', true);
 mongoose.connect(process.env.MONGODB_URL,{useNewUrlParser: true})
 
 app.use(express.json())
+app.use(formidable())
 app.use('/users',user_routes)
 app.use('/orders',order_routes)
 app.use('/auth',auth_routes)
