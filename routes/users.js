@@ -2,6 +2,7 @@ import express from "express"
 import bcrypt from 'bcrypt'
 import User from '../models/user.model.js'
 import Order from "../models/order.model.js"
+import formidable from 'express-formidable'
 import requireToken from "../middleware/requireToken.js";
 import adminToken from '../middleware/requireAdminToken.js'
 const router=express.Router()
@@ -79,7 +80,7 @@ router.get('/orders/:orderId',requireToken,async(req,res)=>{
 })
 
 router.patch('/orders',adminToken,async(req,res)=>{
-    let {userId,orders}=req.body
+    let {userId,orders=[]}=req.body
     let user,invalidIds=false
     const assignedOrders=await User.find({ assignedOrders : { $elemMatch :{$in : orders} }}, { _id: 1})
     if(assignedOrders.length>0){
@@ -136,7 +137,7 @@ router.patch('/',adminToken,async(req,res)=>{
     }
 })
 
-router.post('/',adminToken,async(req,res)=>{
+router.post('/',adminToken,formidable(),async(req,res)=>{
 const {name,password,canVerify,userId}=req.fields
 
 if(userId && password){

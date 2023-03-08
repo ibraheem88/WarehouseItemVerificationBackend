@@ -1,6 +1,7 @@
 import express from "express"
 import bcrypt from 'bcrypt'
 import dotenv from "dotenv"
+import formidable from 'express-formidable'
 dotenv.config()
 import User from '../models/user.model.js'
 import jsonwebtoken from "jsonwebtoken"
@@ -15,8 +16,7 @@ const comparePassword=(password,hash='')=>{
     }
    }
 
-router.post('/login',async(req,res)=>{
-try {
+router.post('/login',formidable(),async(req,res)=>{
     const {userId,password}=req.fields
     let userExists;
     userExists=await User.findOne({userId})
@@ -30,13 +30,8 @@ try {
     }
     else{
         res.json({message: "Invalid Username or Password",status: 401,data: {}})
-    }
-} catch (error) {
-    return res.status(400).json({
-        success: false,
-        message: "error",
-    })
-}
-})
+    }}
+
+)
 
 export default router

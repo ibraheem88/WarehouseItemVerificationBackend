@@ -12,7 +12,7 @@ router.get('/',requireAdminToken,async(req,res)=>{
 })
 
 router.post('/',requireAdminToken,async(req,res)=>{
-    const {orders}=req.body
+    const {orders=[]}=req.body
     let duplicate=false
     const orderIds=orders.map((order=>order.entity_id))
     const orderIdsDb=await Order.distinct('entity_id')
